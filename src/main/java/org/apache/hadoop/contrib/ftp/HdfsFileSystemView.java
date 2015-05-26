@@ -52,8 +52,6 @@ public class HdfsFileSystemView implements FileSystemView {
 			rootDir += '/';
 		}
 		this.rootDir = rootDir;
-		this.currDir = rootDir;
-
 		this.user = user;
 
 
@@ -71,7 +69,7 @@ public class HdfsFileSystemView implements FileSystemView {
 	 * Get the current directory.
 	 */
 	public FileObject getCurrentDirectory() {
-		return new HdfsFileObject(currDir, user);
+		return new HdfsFileObject(this.rootDir + currDir.substring(1), user);
 	}
 
 	/**
@@ -82,7 +80,7 @@ public class HdfsFileSystemView implements FileSystemView {
 		if (file.startsWith("/")) {
 			path = this.rootDir + file.substring(1);
 		} else  {
-			path = currDir + "/" + file;
+			path = this.rootDir +  currDir.substring(1) + "/" + file;
 		} 
 		return new HdfsFileObject(path, user);
 	}
@@ -95,11 +93,11 @@ public class HdfsFileSystemView implements FileSystemView {
 		if (dir.startsWith("/")) {
 			path = this.rootDir + dir.substring(1);
 		} else  {
-			path = currDir + "/" + dir;
+			path = this.rootDir +  currDir.substring(1) + "/" + dir;
 		} 
 		HdfsFileObject file = new HdfsFileObject(path, user);
 		if (file.isDirectory() && file.hasReadPermission()) {
-			currDir = path;
+			currDir = path.replaceFirst(this.rootDir, "/");
 			return true;
 		} else {
 			return false;
