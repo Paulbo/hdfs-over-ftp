@@ -1,0 +1,4 @@
+*.keytab
+*-site.xml
+krb5.conf
+/target/*
