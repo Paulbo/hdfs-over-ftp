@@ -306,6 +306,8 @@ public class FSFileObject implements FileObject {
 
 		try {
 			DistributedFileSystem dfs = FSClient.getDfs();
+			while(!this.getParent().doesExist())
+				this.getParent().mkdir();
 			dfs.mkdirs(path);
 			dfs.setOwner(path, user.getName(), user.getMainGroup());
 			return true;
