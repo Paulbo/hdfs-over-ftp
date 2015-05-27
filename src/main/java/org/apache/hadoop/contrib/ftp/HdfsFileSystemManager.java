@@ -10,6 +10,7 @@ import org.apache.ftpserver.ftplet.User;
  */
 public class HdfsFileSystemManager implements FileSystemManager {
 	public FileSystemView createFileSystemView(User user) throws FtpException {
-		return new HdfsFileSystemView(user);
+//		return new HdfsFileSystemView(user);
+		return new FSFileSystemView(user);
 	}
 }

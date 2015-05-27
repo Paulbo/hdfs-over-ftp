@@ -5,17 +5,18 @@ import java.util.ArrayList;
 
 import org.apache.ftpserver.ftplet.FtpException;
 import org.apache.hadoop.contrib.ftp.*;
+import org.apache.hadoop.fs.Path;
 
 public class Test {
 	public static void main(String[] args) throws Exception {
 		HdfsUser ftpUser = new HdfsUser();
-		ftpUser.setName("test");
-		ftpUser.setPassword("test");
+		ftpUser.setName("hive");
+		ftpUser.setPassword("hive");
 		
 		ftpUser.setEnabled(true);
-		ftpUser.setHomeDirectory("/");
+		ftpUser.setHomeDirectory("/tmp");
 		ArrayList<String> groups = new ArrayList<String>();
-		groups.add("users");
+		groups.add("users,hive");
 		ftpUser.setGroups(groups );
 		
 		

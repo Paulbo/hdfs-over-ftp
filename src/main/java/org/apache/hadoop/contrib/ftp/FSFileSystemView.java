@@ -1,22 +1,21 @@
 package org.apache.hadoop.contrib.ftp;
 
-import org.apache.ftpserver.filesystem.NativeFileObject;
 import org.apache.ftpserver.ftplet.FileObject;
 import org.apache.ftpserver.ftplet.FileSystemView;
 import org.apache.ftpserver.ftplet.FtpException;
 import org.apache.ftpserver.ftplet.User;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Implemented FileSystemView to use HdfsFileObject
  */
-public class HdfsFileSystemView implements FileSystemView {
+public class FSFileSystemView implements FileSystemView {
 
 	// the root directory will always end with '/'.
-	private String rootDir = "/";
-
+	private Path rootPath = null;
 	// the first and the last character will always be '/'
 	// It is always with respect to the root directory.
-	private String currDir = "/";
+	private Path currPath = null;
 
 	private User user;
 
@@ -27,14 +26,14 @@ public class HdfsFileSystemView implements FileSystemView {
 	/**
 	 * Constructor - set the user object.
 	 */
-	protected HdfsFileSystemView(User user) throws FtpException {
+	protected FSFileSystemView(User user) throws FtpException {
 		this(user, true);
 	}
 
 	/**
 	 * Constructor - set the user object.
 	 */
-	protected HdfsFileSystemView(User user, boolean caseInsensitive)
+	protected FSFileSystemView(User user, boolean caseInsensitive)
 			throws FtpException {
 		if (user == null) {
 			throw new IllegalArgumentException("user can not be null");
@@ -46,14 +45,9 @@ public class HdfsFileSystemView implements FileSystemView {
 
 		this.caseInsensitive = caseInsensitive;
 
-		// add last '/' if necessary
-		String rootDir = user.getHomeDirectory();
-		  rootDir = NativeFileObject.normalizeSeparateChar(rootDir);
-		if (!rootDir.endsWith("/")) {
-			rootDir += '/';
-		}
-		this.rootDir = rootDir;
-		this.currDir = "/";
+		this.rootPath = new Path(user.getHomeDirectory());
+		this.currPath = this.rootPath;
+		
 		this.user = user;
 
 	}
@@ -63,42 +57,48 @@ public class HdfsFileSystemView implements FileSystemView {
 	 * user.
 	 */
 	public FileObject getHomeDirectory() {
-		return new HdfsFileObject(this.rootDir, user);
+		return new FSFileObject(this.rootPath, user);
 	}
 
 	/**
 	 * Get the current directory.
 	 */
 	public FileObject getCurrentDirectory() {
-		return new HdfsFileObject(this.rootDir + currDir.substring(1), user);
+		return new FSFileObject(this.currPath , user);
 	}
 
 	/**
 	 * Get file object.
 	 */
 	public FileObject getFileObject(String file) {
-		String path;
+		Path path;
 		if (file.startsWith("/")) {
-			path = this.rootDir + file.substring(1);
+			path = new Path(this.rootPath, getRelativePath(file));
 		} else  {
-			path = this.rootDir +  currDir.substring(1) + "/" + file;
+			path = new Path(this.currPath, file);
 		} 
-		return new HdfsFileObject(path, user);
+		
+		if(path.toString().startsWith(this.rootPath.toString()))
+			return new FSFileObject(path, user);
+		else
+			return null;
 	}
 
 	/**
 	 * Change directory.
 	 */
 	public boolean changeDirectory(String dir) {
-		String path;
+		Path path;
 		if (dir.startsWith("/")) {
-			path = this.rootDir + dir.substring(1);
+			path = new Path(this.rootPath, getRelativePath(dir));
 		} else  {
-			path = this.rootDir +  currDir.substring(1) + "/" + dir;
+			path = new Path(this.currPath, dir);
 		} 
-		HdfsFileObject file = new HdfsFileObject(path, user);
-		if (file.isDirectory() && file.hasReadPermission()) {
-			currDir = path.replaceFirst(this.rootDir, "/");
+		
+		
+		FSFileObject file = new FSFileObject(path, user);
+		if (file.isDirectory() && file.hasReadPermission() && path.toString().startsWith(this.rootPath.toString())) {
+			currPath = path;
 			return true;
 		} else {
 			return false;
@@ -116,5 +116,12 @@ public class HdfsFileSystemView implements FileSystemView {
 	 * Dispose file system view - does nothing.
 	 */
 	public void dispose() {
+	}
+	
+	private String getRelativePath(String curStr){
+		if(curStr.equals("/"))
+			return ".";
+		else
+			return curStr.substring(1);
 	}
 }

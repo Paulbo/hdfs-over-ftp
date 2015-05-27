@@ -18,13 +18,13 @@ import java.io.OutputStream;
 /**
  * This class implements all actions to HDFS
  */
-public class HdfsFileObject implements FileObject {
+public class FSFileObject implements FileObject {
 
-	private final Logger log = LoggerFactory.getLogger(HdfsFileObject.class);
+	private final Logger log = LoggerFactory.getLogger(FSFileObject.class);
 
 	private Path path;
 	private HdfsUser user;
-	private String rootDir;
+	private Path rootPath;
 
 	/**
 	 * Constructs HdfsFileObject from path
@@ -32,12 +32,19 @@ public class HdfsFileObject implements FileObject {
 	 * @param path path to represent object
 	 * @param user accessor of the object
 	 */
-	public HdfsFileObject(String path, User user) {
-		this.path = new Path(path);
+	public FSFileObject(Path path, User user) {
+		this.path = path;
 		this.user = (HdfsUser) user;
-		this.rootDir = user.getHomeDirectory();
+		this.rootPath = new Path(user.getHomeDirectory());
 	}
 
+	
+	private String getRelativeName(String relativePath){
+		if (relativePath.equals(this.rootPath.toString()))
+			return "/";
+		else
+			return relativePath.replaceFirst(rootPath.toString(), "");
+	}
 	/**
 	 * Get full name of the object
 	 *
@@ -45,12 +52,10 @@ public class HdfsFileObject implements FileObject {
 	 */
 	public String getFullName() {
 		try{
-			String fullName = path.toString().replaceFirst(this.rootDir.substring(1), "/");
-			System.out.println("Get FullName:\npath = " + path.toString() +"\nrootDir = " + this.rootDir + "\nFullname = " + fullName);
-			return fullName;
+			return getRelativeName(path.toString());
 		}catch (Exception e) {
 			log.error("User rootDir Error ", e);
-			return this.rootDir;
+			return getRelativeName(this.rootPath.toString());
 		}
 	}
 
@@ -60,12 +65,7 @@ public class HdfsFileObject implements FileObject {
 	 * @return short name of the object
 	 */
 	public String getShortName() {
-		String full = getFullName();
-		int pos = full.lastIndexOf("/");
-		if (pos == 0) {
-			return "/";
-		}
-		return full.substring(pos + 1);
+		return path.getName();
 	}
 
 	/**
@@ -168,14 +168,14 @@ public class HdfsFileObject implements FileObject {
 		}
 	}
 
-	private HdfsFileObject getParent() {
-		String pathS = getFullName();
+	private FSFileObject getParent() {
+		String pathS = path.toString();
 		String parentS = "/";
 		int pos = pathS.lastIndexOf("/");
 		if (pos > 0) {
 			parentS = pathS.substring(0, pos);
 		}
-		return new HdfsFileObject(parentS, user);
+		return new FSFileObject(new Path(parentS), user);
 	}
 
 	/**
@@ -366,7 +366,7 @@ public class HdfsFileObject implements FileObject {
 
 			FileObject fileObjects[] = new FileObject[fileStats.length];
 			for (int i = 0; i < fileStats.length; i++) {
-				fileObjects[i] = new HdfsFileObject(fileStats[i].getPath().toString(), user);
+				fileObjects[i] = new FSFileObject(fileStats[i].getPath(), user);
 			}
 			return fileObjects;
 		} catch (IOException e) {
